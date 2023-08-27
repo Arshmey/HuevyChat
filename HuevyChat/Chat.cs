@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace HueChat
@@ -39,10 +40,14 @@ namespace HueChat
 
         private void MessageUser_KeyDown(object sender, KeyEventArgs e)
         {
-            if (MessageUser.Text != "" & e.KeyCode == Keys.Enter)
+            if (e.KeyData == Keys.Enter)
             {
-                client.Writer(MessageUser.Text);
-                MessageUser.Text = "";
+                e.SuppressKeyPress = true;
+                if (MessageUser.Text != "")
+                {
+                    client.Writer(MessageUser.Text);
+                    MessageUser.Text = "";
+                }
             }
         }
 

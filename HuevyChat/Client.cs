@@ -1,4 +1,6 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
@@ -27,6 +29,10 @@ namespace HueChat
 
             isConnectedThread = new Thread(isConnected);
             isConnectedThread.Start();
+
+            byte[] bufSend = Encoding.UTF8.GetBytes("/NICK: " + Nick);
+            stream.Write(bufSend, 0, bufSend.Length);
+            stream.Flush();
         }
 
         private void isConnected()
@@ -42,12 +48,13 @@ namespace HueChat
 
         private void Read()
         {
-           while (true)
-           {
+            while (true)
+            {
                 try
                 {
-                    byte[] buffer = new byte[2048];
+                    byte[] buffer = new byte[1048576];
                     stream.Read(buffer, 0, buffer.Length);
+                    buffer = buffer.Where(x => x > 0).ToArray();
                     msg = Encoding.UTF8.GetString(buffer);
                 }
                 catch { }

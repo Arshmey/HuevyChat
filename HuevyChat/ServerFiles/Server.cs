@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
 using System.Net;
 using System.Text;
@@ -11,9 +10,11 @@ namespace HueChat.ServerFiles
     public class Server
     {
         TcpListener serverClient;
-        List<TcpClient> client = new List<TcpClient>();
-        List<NetworkStream> stream = new List<NetworkStream>();
-        List<Sender> senderThread = new List<Sender>();
+        Dictionary<string, TcpClient> client = new Dictionary<string, TcpClient>();
+        Dictionary<string, NetworkStream> stream = new Dictionary<string, NetworkStream>();
+        Dictionary<string, Sender> senderThread = new Dictionary<string, Sender>();
+        private string ID;
+        private char[] alphabet = { 'a', 'b', 'c', 'd', 'e', 'f', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
 
         public Server(int PORT)
         {
@@ -28,33 +29,31 @@ namespace HueChat.ServerFiles
         {
             while (true)
             {
-                client.Add(serverClient.AcceptTcpClient());
-                stream.Add(client[(client.Count - 1)].GetStream());
-                senderThread.Add(new Sender(this, stream, (client.Count - 1)));
-                Console.WriteLine("Done");
-
-                if (client.Count - 1 != 0)
-                {
-                    byte[] helloBuf = Encoding.UTF8.GetBytes("Welcoe to Cumzone.");
-                    stream[(client.Count - 1)].Write(helloBuf, 0, helloBuf.Length);
-                    stream[(client.Count - 1)].Flush();
-                }
-
+                GenerateID();
+                client.Add(ID, serverClient.AcceptTcpClient());
+                stream.Add(ID, client[ID].GetStream());
+                senderThread.Add(ID, new Sender(this, stream, ID));
             }
         }
 
-        public void deleteVoidClient(int youPosition)
+        private void GenerateID()
         {
-            client[youPosition].Close();
-            client.RemoveAt(youPosition);
-            stream.RemoveAt(youPosition);
-            senderThread.RemoveAt(youPosition);
-            Console.WriteLine("Void client deleted.");
-
-            for (int Position = 1; Position != senderThread.Count; Position++)
+            for (int i = 0; i != 12; i++ )
             {
-                if (Position > senderThread.Count) { senderThread[Position].ResetPosition(Position); }
+                if (i == 2 || i == 5 || i == 8)
+                {
+                    ID += "-";
+                }else { ID += alphabet[new Random().Next(0, alphabet.Length - 1)]; }
             }
+        }
+
+        public void deleteVoidClient(string ID, string NICK)
+        {
+            client[ID].Close();
+            client.Remove(ID);
+            stream.Remove(ID);
+            senderThread.Remove(ID);
+            Console.WriteLine("Void client deleted.");
         }
 
         public int countClients()

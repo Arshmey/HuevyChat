@@ -41,7 +41,6 @@
             this.MessageUser.Multiline = true;
             this.MessageUser.Name = "MessageUser";
             this.MessageUser.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.MessageUser.ShortcutsEnabled = false;
             this.MessageUser.Size = new System.Drawing.Size(605, 45);
             this.MessageUser.TabIndex = 0;
             this.MessageUser.KeyDown += new System.Windows.Forms.KeyEventHandler(this.MessageUser_KeyDown);

@@ -40,7 +40,7 @@ namespace HueChat
         {
             while (true)
             {
-                byte[] buffer = new byte[2048];
+                byte[] buffer = new byte[8192];
                 logStream.Read(buffer, 0, buffer.Length);
                 LogViwer.Invoke(new Action(() => { LogViwer.Text += "\r\n" + Encoding.UTF8.GetString(buffer); }));
             }

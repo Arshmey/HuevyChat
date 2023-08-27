@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -9,17 +10,17 @@ namespace HueChat.ServerFiles
     internal class Sender
     {
         Server server;
-        List<NetworkStream> stream;
+        Dictionary<string, NetworkStream> stream;
         Thread senderMSG;
-        private int youPosition;
-        private bool work = true;
+        private string ID;
+        private string NICK;
         private string msg;
 
-        public Sender(Server server, List<NetworkStream> stream, int youPosition)
+        public Sender(Server server, Dictionary<string, NetworkStream> stream, string ID)
         {
             this.server = server;
             this.stream = stream;
-            this.youPosition = youPosition;
+            this.ID = ID;
 
             senderMSG = new Thread(SenderMSG);
             senderMSG.Start();
@@ -27,29 +28,36 @@ namespace HueChat.ServerFiles
 
         private void SenderMSG()
         {
-            while (work)
+            while (true)
             {
+                bool isCommand = false;
                 try
                 {
-                    byte[] bufRead = new byte[2048];
-                    stream[youPosition].Read(bufRead, 0, bufRead.Length);
+                    byte[] bufRead = new byte[1048576];
+                    stream[ID].Read(bufRead, 0, bufRead.Length);
+                    bufRead = bufRead.Where(x => x > 0).ToArray();
                     msg = Encoding.UTF8.GetString(bufRead);
+                    if (msg.Contains("/NICK: ")) { msg = msg.Replace("/NICK: ", ""); NICK = msg; isCommand = true; Welcome(NICK); }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine("Readder: " + ex.Message);
                     StopAll();
+                    break;
                 }
 
                 try
                 {
-                    foreach (NetworkStream send in stream)
+                    if (!isCommand)
                     {
-                        if (send.CanWrite)
+                        foreach (NetworkStream send in stream.Values)
                         {
-                            byte[] bufSend = Encoding.UTF8.GetBytes(msg);
-                            send.Write(bufSend, 0, bufSend.Length);
-                            send.Flush();
+                            if (send.CanWrite)
+                            {
+                                byte[] bufSend = Encoding.UTF8.GetBytes(msg);
+                                send.Write(bufSend, 0, bufSend.Length);
+                                send.Flush();
+                            }
                         }
                     }
                 }
@@ -60,17 +68,28 @@ namespace HueChat.ServerFiles
             }
         }
 
-        public void StopAll()
+        private void Welcome(string NICK)
         {
-            work = false;
-            stream[youPosition].Close();
-            server.deleteVoidClient(youPosition);
-            senderMSG.Abort();
+            byte[] helloBuf = Encoding.UTF8.GetBytes("Welcome to Cumzone " + NICK + ".");
+            stream[ID].Write(helloBuf, 0, helloBuf.Length);
+            stream[ID].Flush();
+
+            foreach (NetworkStream newUserStream in stream.Values)
+            {
+                if (newUserStream.CanWrite && (newUserStream != stream[ID]))
+                {
+                    byte[] bufSend = Encoding.UTF8.GetBytes("\r\n" + NICK + " now joined");
+                    newUserStream.Write(bufSend, 0, bufSend.Length);
+                    newUserStream.Flush();
+                }
+            }
         }
 
-        public void ResetPosition(int pos)
+        private void StopAll()
         {
-            youPosition = pos;
+            stream[ID].Close();
+            server.deleteVoidClient(ID, NICK);
+            senderMSG.Abort();
         }
 
         public string MSGlog()
